@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 int count(int* top, int* middle, int* low,char* buf, int n){
@@ -21,14 +22,16 @@ int count(int* top, int* middle, int* low,char* buf, int n){
 
       if(neighbours < 4 && middle[i]){
         result += 1;
-        buf[i] = 0;
-      }else {
-        buf[i]=middle[i];
+        buf[i] = ' ';
+      }else if(middle[i]){
+        buf[i]= '@';
+      }else{
+        buf[i] = ' ';
       }
 
     }
 
-    printf("once topmost");
+    printf("once topmost\n");
 
   }else if(low == 0 && top != 0 && middle != 0){
     //do lowest line
@@ -46,13 +49,15 @@ int count(int* top, int* middle, int* low,char* buf, int n){
 
       if(neighbours < 4 && middle[i]){
         result += 1;
-        buf[i] = 0;
-      }else {
-        buf[i]=middle[i];
+        buf[i] = ' ';
+      }else if(middle[i]){
+        buf[i]= '@';
+      }else{
+        buf[i] = ' ';
       }
     }
 
-    printf("once lowest");
+    printf("once lowest\n");
   }else{
     //regular
     for(int i = 0; i <n; i++){
@@ -69,9 +74,11 @@ int count(int* top, int* middle, int* low,char* buf, int n){
 
       if(neighbours < 4 && middle[i]){
         result += 1;
-        buf[i] = 0;
-      }else {
-        buf[i]=middle[i];
+        buf[i] = ' ';
+      }else if(middle[i]){
+        buf[i]= '@';
+      }else{
+        buf[i] = ' ';
       }
 
     }
@@ -86,111 +93,81 @@ int main(int argc, char *argv[])
   FILE *fptr = fopen("input", "r");
   FILE *readfile = fopen("imediate", "w+");
   FILE *writefile = fopen("imediate2", "w+");
-
-  if(!fptr){
-    printf("failed to open input file\n");
-    return 1;
-  }
-
-  if(!readfile || !writefile){
-    printf("failed to open intermediate files\n");
-    return 1;
-  }
+  if(!fptr){ printf("failed to open input file\n"); return 1; }
+  if(!readfile || !writefile){ printf("failed to open intermediate files\n"); return 1; }
 
   char buf[1024];
-  long result = 0;
-  long oldresult = 0;
-  int row = 0;
+  long total = 0;
+  long removed_this_pass = 0;
   int column = 0;
-
   int counter = 0;
 
-  do{
-    oldresult = result;
+  do {
+    removed_this_pass = 0;
 
-    // choose input file
-    FILE *current_read;
-    FILE *current_write;
-
-    if(counter % 2 == 0){
-      current_read = readfile;
-      current_write = writefile;
-    }else{
-      current_read = writefile;
-      current_write = readfile;
-    }
+    FILE *current_read = (counter == 0) ? fptr : (counter % 2 == 1 ? writefile : readfile);
+    FILE *current_write = (counter % 2 == 1) ? readfile : writefile;
 
     rewind(current_read);
+    rewind(current_write);
 
-    int *top = 0;
-    int *middle = 0;
-    int *low = 0;
-    char *bufwback = calloc(1024,  sizeof(char));
+    int *top = NULL;
+    int *middle = NULL;
+    int *low = NULL;
+    char *bufwback = calloc(1024, sizeof(char));
+    char *prevbuf = NULL;   // holds the written line for the previous middle row
 
-    while(fgets(buf, 1024, fptr)){
-
-      int *new = malloc(1024 * sizeof(int));
+    while(fgets(buf, 1024, current_read)){
+      int *newrow = malloc(1024 * sizeof(int));
+      column = 0;
       for(int i = 0; i < 1024; i++){
-        if(buf[i] == '\n'){
-          column = i;
-          break;
-        }
-
-        new[i] = (buf[i] == '@') ? 1 : 0;
+        if(buf[i] == '\n' || buf[i] == '\0'){ column = i; break; }
+        newrow[i] = (buf[i] == '@') ? 1 : 0;
       }
-
-      row++;
-
-      // your transformation (unchanged)
-      for(int i = 0; i < column && top; i++){
-        if(bufwback[i] == 1){
-          buf[i] = '@';
-        }else{
-          buf[i] = ' ';
-        }
-      }
-
-      buf[column] = '\0';
-
-      fprintf(current_write, "%s\n", buf);
 
       free(top);
       top = middle;
       middle = low;
-      low = new;
+      low = newrow;
 
-      if(middle != 0){
-        result += count(top, middle, low, bufwback, column);
+      if(middle != NULL){
+        removed_this_pass += count(top, middle, low, bufwback, column);
+
+        // now write the previous middle row (bufwback is its result)
+        if(prevbuf != NULL){
+          fprintf(current_write, "%s\n", prevbuf);
+          free(prevbuf);
+        }
+        prevbuf = malloc(1024 * sizeof(char));
+        memcpy(prevbuf, bufwback, 1024);
+        free(bufwback);
+        bufwback = calloc(1024, sizeof(char));
       }
     }
 
-    result += count(middle, low, 0, bufwback, column);
-
-    for(int i = 0; i < column && top; i++){
-      if(bufwback[i] == 1){
-        buf[i] = '@';
-      }else{
-        buf[i] = ' ';
-      }
+    // handle the last row
+    removed_this_pass += count(middle, low, NULL, bufwback, column);
+    if(prevbuf != NULL){
+      fprintf(current_write, "%s\n", prevbuf);
+      free(prevbuf);
     }
+    fprintf(current_write, "%s\n", bufwback);
+
     free(top);
     free(middle);
     free(low);
     free(bufwback);
 
     fflush(current_write);
-
+    total += removed_this_pass;
     counter++;
 
-  }while(oldresult != result);
+  } while(removed_this_pass > 0);
 
   fclose(fptr);
   fclose(readfile);
   fclose(writefile);
 
-  printf("rows: %d, columns: %d\n", row, column);
-  printf("The result is %ld\n", result);
-
+  printf("The result is %ld\n", total);
   return 0;
 }
-
