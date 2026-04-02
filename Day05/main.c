@@ -22,10 +22,9 @@ struct listelement *coaleslinkedlist(struct listelement *linkedlist){
 
   struct listelement *workinglist = linkedlist;
   struct listelement *resultlist = 0; 
-  long lastsize = listsize(linkedlist); 
-
+  long inputsize, outputsize;
   do{
-    lastsize = listsize(resultlist);    
+    inputsize = listsize(workinglist);
     resultlist = 0;
 
     while(workinglist != 0){
@@ -39,38 +38,32 @@ struct listelement *coaleslinkedlist(struct listelement *linkedlist){
 
         if(tocheck -> start < start && tocheck -> end < start){
           //element to check before our working element
-          continue;
         }else if(tocheck -> start > end && tocheck -> end > end){
           //element to check after our working element
-          continue;
-        }else if(tocheck -> start < start && tocheck -> end < end){
+        }else if(tocheck -> start < start && tocheck -> end <= end){
           //element to check starts before but ends before working element 
           start = tocheck -> start;
           parent -> next = tocheck -> next;
           free(tocheck);
           tocheck = parent;
-          continue;
-        }else if(tocheck -> start > start && tocheck -> end > end){
+        }else if(tocheck -> start >= start && tocheck -> end > end){
           //element to check starts after but ends after working element
           end = tocheck -> end;
           parent -> next = tocheck -> next;
           free(tocheck);
           tocheck = parent;
-          continue;
-        }else if(tocheck -> start > start && tocheck -> end < end){
+        }else if(tocheck -> start >= start && tocheck -> end <= end){
           //element contained in our working element
           parent -> next = tocheck -> next;
           free(tocheck);
           tocheck = parent;
-          continue;
-        }else if(tocheck -> start < start && tocheck -> end > end){
+        }else if(tocheck -> start <= start && tocheck -> end >= end){
           //element contains our working element
           start = tocheck -> start;
           end = tocheck -> end;
           parent -> next = tocheck -> next;
           free(tocheck);
           tocheck = parent;
-          continue;
         }else {
           printf("You should have never ended up here!!!");
         }
@@ -83,6 +76,7 @@ struct listelement *coaleslinkedlist(struct listelement *linkedlist){
       struct listelement *newelem = malloc(sizeof(struct listelement));
       newelem -> start = start;
       newelem -> end = end;
+      newelem -> next = 0;
       if(resultlist == 0){
         resultlist = newelem;
       }else {
@@ -92,7 +86,9 @@ struct listelement *coaleslinkedlist(struct listelement *linkedlist){
 
       workinglist = workinglist -> next;
     }
-  }while(lastsize > listsize(resultlist));
+    outputsize = listsize(resultlist);
+    workinglist = resultlist;
+  }while(outputsize < inputsize);
 
   return resultlist;
 }
