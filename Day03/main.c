@@ -33,9 +33,8 @@ struct resultvector *findmax(long* start, long* end){
 
 }
 
-long find_joltag(long n, long nums[1024]){
+long find_joltag(long n, long nums[1024], long amount){
   
-  long amount = 12;
   long *start = nums;
   long *end = nums + (n -amount);
   long sum = 0;
@@ -64,6 +63,7 @@ int main(int argc, char *argv[])
 
   char buf[1024];
   long result = 0;
+  long resultlength = 12;
 
   long numbers[1024];
   long n = 0;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
         numbers[i] = buf[i] - '0';
       }
     }
-    result += find_joltag(n, numbers);
+    result += find_joltag(n, numbers, resultlength);
     
   }
 
