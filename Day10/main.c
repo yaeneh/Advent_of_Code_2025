@@ -7,57 +7,67 @@
 #define BUFSIZE 1024
 
 typedef struct Node {
-    uint32_t value;
+    uint64_t value;
     struct Node *next;
-} Node;
+}Node; 
 
-uint32_t bfs(uint32_t goal,
-             uint32_t state,
-             Node *head,
-             uint32_t *states,
-             uint32_t possible_states)
-{
-    uint32_t *queue = malloc(possible_states * sizeof(uint32_t));
+uint64_t calculate_part1(Node *LinkedList, uint64_t goalstate ) {
 
-    if (queue == NULL) {
-        perror("malloc");
-        exit(EXIT_FAILURE);
+  
+
+
+
+}
+
+void parse_nbrackets(char *buf, Node **LinkedList){
+  char *start = strchr(buf, '(');
+  char *end = strchr(buf, ')');
+
+  //while we still find () brackets
+  while(start != NULL){
+     
+    uint64_t buttonchange = 0;
+    char *nrpointer = start + 1;
+
+    //parsing a single () bracket
+    char *nrendpointer = NULL;
+    long nr = strtol(nrpointer, &nrendpointer, 10);
+    do{
+      buttonchange = buttonchange | (1<<nr);
+      nrpointer = nrendpointer + 1;
+      nr = strtol(nrpointer, &nrendpointer, 10);
+    } while(nrendpointer != nrpointer);
+
+    //creating a new Linkedlist entry and adding it in the front
+    Node *tmp = malloc(sizeof(Node));
+    tmp -> value = buttonchange;
+    tmp -> next = *LinkedList;
+    *LinkedList = tmp;
+
+    //searching the next () brackets
+    start = strchr(end+1, '(');
+    end = strchr(end+1, ')');
+  }
+}
+
+void parse_ebrackets(char *buf, uint64_t *result, uint64_t *bits){
+  char *start = strchr(buf, '[');
+  char *end = strchr(buf, ']');
+
+  char *tmp = start + 1;
+  
+  while(tmp != end){
+
+    uint64_t towrite = 0x1;
+    if(*tmp == '.') {
+      towrite = 0x0;
     }
 
-    uint32_t front = 0;
-    uint32_t back = 0;
+    *result = ((*result) << 1)|towrite;
+    tmp++;
 
-    states[state] = 0;
-    queue[back++] = state;
-
-    while (front < back) {
-        state = queue[front++];
-
-        if (state == goal) {
-            uint32_t result = states[state];
-
-            free(queue);
-
-            return result;
-        }
-
-        Node *tmp = head;
-
-        while (tmp != NULL) {
-            uint32_t new_state = state ^ tmp->value;
-
-            if (states[new_state] == UINT32_MAX) {
-                states[new_state] = states[state] + 1;
-                queue[back++] = new_state;
-            }
-
-            tmp = tmp->next;
-        }
-    }
-
-    free(queue);
-
-    return UINT32_MAX;
+  }
+ 
 }
 
 int main(int argc, char *argv[])
@@ -79,48 +89,31 @@ int main(int argc, char *argv[])
         // Remove newline
         buf[strcspn(buf, "\n")] = '\0';
 
-        /*
-         * =========================
-         * Parse []
-         * =========================
-         */
+        uint64_t goalstate = 0;
+        uint64_t bits = 0;
 
-        char *start = strchr(buf, '[');
-        char *end = strchr(buf, ']');
+        parse_ebrackets(buf, &goalstate, &bits);
 
-        uint32_t goal = 0;
-        uint32_t size = 0;
-
-        if (start && end) {
-            printf("[]: ");
-
-            for (char *p = start + 1; p < end; p++) {
-
-                goal <<= 1;
-
-                if (*p == '#') {
-                    goal |= 1;
-                }
-
-                size++;
-
-                printf("%c", *p);
-            }
-
-            printf("\n");
+        printf("Goalstate = %b\n", goalstate);
+        
+        Node *LinkedList = NULL;
+        parse_nbrackets(buf, &LinkedList);
+        
+        Node *tmp = LinkedList;
+        while(tmp != NULL){
+          printf("Button: %b\n", tmp->value);
+          tmp = tmp -> next;
         }
+        //parse_sbrackets();
+        
+        calculate_part1(LinkedList, goalstate);
+    /*
 
-        /*
-         * Number of possible states = 2^size
-         */
+        // Number of possible states = 2^size 
 
         uint32_t possible_states = UINT32_C(1) << size;
 
-        /*
-         * =========================
-         * Parse ()
-         * =========================
-         */
+        // ========================= Parse () ========================= 
 
         Node *head = NULL;
 
@@ -179,11 +172,7 @@ int main(int argc, char *argv[])
             p = end + 1;
         }
 
-        /*
-         * =========================
-         * Parse {}
-         * =========================
-         */
+        // ========================= Parse {} =========================
 
         start = strchr(buf, '{');
         end = strchr(buf, '}');
@@ -198,11 +187,7 @@ int main(int argc, char *argv[])
             printf("\n");
         }
 
-        /*
-         * =========================
-         * Initialize states
-         * =========================
-         */
+        // ========================= Initialize states ========================= 
 
         uint32_t *states =
             malloc(possible_states * sizeof(uint32_t));
@@ -217,20 +202,13 @@ int main(int argc, char *argv[])
             states[i] = UINT32_MAX;
         }
 
-        /*
-         * =========================
-         * BFS
-         * =========================
-         *
-         * Start at state 0.
-         */
+        // ========================= BFS ========================= Start at state 0. 
 
         uint32_t result = bfs(
             goal,
-            0,
             head,
             states,
-            possible_states
+            ~(0x0)
         );
 
         if (result == UINT32_MAX) {
@@ -242,19 +220,10 @@ int main(int argc, char *argv[])
             total += result;
         }
 
-        /*
-         * =========================
-         * Free states
-         * =========================
-         */
-
+        // ========================= Free states ========================= 
         free(states);
 
-        /*
-         * =========================
-         * Free linked list
-         * =========================
-         */
+        // ========================= Free linked list ========================= 
 
         Node *tmp;
 
@@ -263,17 +232,14 @@ int main(int argc, char *argv[])
             head = head->next;
             free(tmp);
         }
-
+        */
         printf("LINE: %s\n\n", buf);
+        
     }
 
     fclose(fptr);
 
-    /*
-     * =========================
-     * Final result
-     * =========================
-     */
+    // ========================= Final result ========================= 
 
     printf("Total minimum presses: %" PRIu64 "\n", total);
 
